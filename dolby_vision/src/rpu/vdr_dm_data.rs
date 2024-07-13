@@ -187,10 +187,24 @@ impl VdrDmData {
         Ok(())
     }
 
+    pub fn ext_block_write_length(&self) -> u32 {
+        let mut ext_block_write_length: u32 = 0;
+
+        if let Some(cmv29) = &self.cmv29_metadata {
+         ext_block_write_length = ext_block_write_length + cmv29.ext_block_write_length();
+        }
+
+        if let Some(cmv40) = &self.cmv40_metadata {
+           ext_block_write_length = ext_block_write_length + cmv40.ext_block_write_length();
+        }
+
+        ext_block_write_length
+    }
+
     pub fn write(&self, writer: &mut BitstreamIoWriter) -> Result<()> {
-        writer.write_ue(&self.affected_dm_metadata_id)?;
-        writer.write_ue(&self.current_dm_metadata_id)?;
-        writer.write_ue(&self.scene_refresh_flag)?;
+        writer.write_n(&self.affected_dm_metadata_id, 4)?;
+        writer.write_n(&self.current_dm_metadata_id, 4)?;
+        writer.write_n(&self.scene_refresh_flag, 8)?;
 
         if !self.compressed {
             writer.write_signed_n(&self.ycc_to_rgb_coef0, 16)?;
@@ -222,15 +236,24 @@ impl VdrDmData {
             writer.write_n(&self.signal_eotf_param1, 16)?;
             writer.write_n(&self.signal_eotf_param2, 32)?;
 
-            writer.write_n(&self.signal_bit_depth, 5)?;
-            writer.write_n(&self.signal_color_space, 2)?;
-            writer.write_n(&self.signal_chroma_format, 2)?;
-            writer.write_n(&self.signal_full_range_flag, 2)?;
+            writer.write_n(&self.signal_bit_depth, 8)?;
+            writer.write_n(&self.signal_color_space, 8)?;
+            writer.write_n(&self.signal_chroma_format, 8)?;
+            writer.write_n(&self.signal_full_range_flag, 8)?;
 
-            writer.write_n(&self.source_min_pq, 12)?;
-            writer.write_n(&self.source_max_pq, 12)?;
-            writer.write_n(&self.source_diagonal, 10)?;
+            writer.write_n(&self.source_min_pq, 16)?;
+            writer.write_n(&self.source_max_pq, 16)?;
+            writer.write_n(&self.source_diagonal, 16)?;
         }
+
+        let mut total_num_ext_blocks: u64 = 0;
+        if let Some(cmv29) = &self.cmv29_metadata {
+            total_num_ext_blocks = total_num_ext_blocks + cmv29.num_ext_blocks();
+        }
+        if let Some(cmv40) = &self.cmv40_metadata {
+            total_num_ext_blocks = total_num_ext_blocks + cmv40.num_ext_blocks();
+        }
+        writer.write_n(&total_num_ext_blocks, 8)?;
 
         if let Some(cmv29) = &self.cmv29_metadata {
             cmv29.write(writer)?;

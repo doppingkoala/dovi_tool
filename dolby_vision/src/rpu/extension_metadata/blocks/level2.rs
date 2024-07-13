@@ -48,13 +48,13 @@ impl ExtMetadataBlockLevel2 {
     pub fn write(&self, writer: &mut BitstreamIoWriter) -> Result<()> {
         self.validate()?;
 
-        writer.write_n(&self.target_max_pq, 12)?;
-        writer.write_n(&self.trim_slope, 12)?;
-        writer.write_n(&self.trim_offset, 12)?;
-        writer.write_n(&self.trim_power, 12)?;
-        writer.write_n(&self.trim_chroma_weight, 12)?;
-        writer.write_n(&self.trim_saturation_gain, 12)?;
-        writer.write_signed_n(&self.ms_weight, 13)?;
+        writer.write_n(&self.target_max_pq, 16)?;
+        writer.write_n(&self.trim_slope, 16)?;
+        writer.write_n(&self.trim_offset, 16)?;
+        writer.write_n(&self.trim_power, 16)?;
+        writer.write_n(&self.trim_chroma_weight, 16)?;
+        writer.write_n(&self.trim_saturation_gain, 16)?;
+        writer.write_signed_n(&self.ms_weight, 16)?;
 
         Ok(())
     }
@@ -86,6 +86,10 @@ impl ExtMetadataBlockInfo for ExtMetadataBlockLevel2 {
 
     fn bytes_size(&self) -> u64 {
         11
+    }
+
+    fn write_bytes_size(&self) -> u32 {
+        14
     }
 
     fn required_bits(&self) -> u64 {

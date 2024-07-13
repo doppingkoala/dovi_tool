@@ -59,6 +59,10 @@ impl ExtMetadataBlockInfo for ReservedExtMetadataBlock {
         self.ext_block_length
     }
 
+    fn write_bytes_size(&self) -> u32 {
+        self.ext_block_length.try_into().unwrap() // probably should be something esle
+    }
+
     fn required_bits(&self) -> u64 {
         self.data.len() as u64
     }

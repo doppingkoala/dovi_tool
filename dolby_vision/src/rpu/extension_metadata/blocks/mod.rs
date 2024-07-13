@@ -60,6 +60,7 @@ pub enum ExtMetadataBlock {
 pub trait ExtMetadataBlockInfo {
     fn level(&self) -> u8;
     fn bytes_size(&self) -> u64;
+    fn write_bytes_size(&self) -> u32;
     fn required_bits(&self) -> u64;
 
     fn bits_size(&self) -> u64 {
@@ -87,6 +88,24 @@ impl ExtMetadataBlock {
             ExtMetadataBlock::Level254(b) => b.bytes_size(),
             ExtMetadataBlock::Level255(b) => b.bytes_size(),
             ExtMetadataBlock::Reserved(b) => b.bytes_size(),
+        }
+    }
+
+    pub fn length_write_bytes(&self) -> u32 {
+        match self {
+            ExtMetadataBlock::Level1(b) => b.write_bytes_size(),
+            ExtMetadataBlock::Level2(b) => b.write_bytes_size(),
+            ExtMetadataBlock::Level3(b) => b.write_bytes_size(),
+            ExtMetadataBlock::Level4(b) => b.write_bytes_size(),
+            ExtMetadataBlock::Level5(b) => b.write_bytes_size(),
+            ExtMetadataBlock::Level6(b) => b.write_bytes_size(),
+            ExtMetadataBlock::Level8(b) => b.write_bytes_size(),
+            ExtMetadataBlock::Level9(b) => b.write_bytes_size(),
+            ExtMetadataBlock::Level10(b) => b.write_bytes_size(),
+            ExtMetadataBlock::Level11(b) => b.write_bytes_size(),
+            ExtMetadataBlock::Level254(b) => b.write_bytes_size(),
+            ExtMetadataBlock::Level255(b) => b.write_bytes_size(),
+            ExtMetadataBlock::Reserved(b) => b.write_bytes_size(),
         }
     }
 

@@ -34,10 +34,10 @@ impl ExtMetadataBlockLevel5 {
     pub fn write(&self, writer: &mut BitstreamIoWriter) -> Result<()> {
         self.validate()?;
 
-        writer.write_n(&self.active_area_left_offset, 13)?;
-        writer.write_n(&self.active_area_right_offset, 13)?;
-        writer.write_n(&self.active_area_top_offset, 13)?;
-        writer.write_n(&self.active_area_bottom_offset, 13)?;
+        writer.write_n(&self.active_area_left_offset, 16)?;
+        writer.write_n(&self.active_area_right_offset, 16)?;
+        writer.write_n(&self.active_area_top_offset, 16)?;
+        writer.write_n(&self.active_area_bottom_offset, 16)?;
 
         Ok(())
     }
@@ -100,6 +100,10 @@ impl ExtMetadataBlockInfo for ExtMetadataBlockLevel5 {
 
     fn bytes_size(&self) -> u64 {
         7
+    }
+
+    fn write_bytes_size(&self) -> u32 {
+        8
     }
 
     fn required_bits(&self) -> u64 {

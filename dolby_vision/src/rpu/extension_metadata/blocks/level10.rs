@@ -67,8 +67,8 @@ impl ExtMetadataBlockLevel10 {
         self.validate()?;
 
         writer.write_n(&self.target_display_index, 8)?;
-        writer.write_n(&self.target_max_pq, 12)?;
-        writer.write_n(&self.target_min_pq, 12)?;
+        writer.write_n(&self.target_max_pq, 16)?;
+        writer.write_n(&self.target_min_pq, 16)?;
         writer.write_n(&self.target_primary_index, 8)?;
 
         if self.length > 5 {
@@ -126,6 +126,14 @@ impl ExtMetadataBlockInfo for ExtMetadataBlockLevel10 {
 
     fn bytes_size(&self) -> u64 {
         self.length
+    }
+
+    fn write_bytes_size(&self) -> u32 {
+        match self.length {
+            5 => 6,
+            21 => 22,
+            _ => unreachable!(),
+        }
     }
 
     fn required_bits(&self) -> u64 {

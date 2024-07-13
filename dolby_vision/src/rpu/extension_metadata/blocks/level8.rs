@@ -99,20 +99,20 @@ impl ExtMetadataBlockLevel8 {
         self.validate()?;
 
         writer.write_n(&self.target_display_index, 8)?;
-        writer.write_n(&self.trim_slope, 12)?;
-        writer.write_n(&self.trim_offset, 12)?;
-        writer.write_n(&self.trim_power, 12)?;
-        writer.write_n(&self.trim_chroma_weight, 12)?;
-        writer.write_n(&self.trim_saturation_gain, 12)?;
-        writer.write_n(&self.ms_weight, 12)?;
+        writer.write_n(&self.trim_slope, 16)?;
+        writer.write_n(&self.trim_offset, 16)?;
+        writer.write_n(&self.trim_power, 16)?;
+        writer.write_n(&self.trim_chroma_weight, 16)?;
+        writer.write_n(&self.trim_saturation_gain, 16)?;
+        writer.write_n(&self.ms_weight, 16)?;
 
         // Write default values when the fields can not be omitted
         if self.length > 10 {
-            writer.write_n(&self.target_mid_contrast, 12)?;
+            writer.write_n(&self.target_mid_contrast, 16)?;
         }
 
         if self.length > 12 {
-            writer.write_n(&self.clip_trim, 12)?;
+            writer.write_n(&self.clip_trim, 16)?;
         }
 
         if self.length > 13 {
@@ -157,6 +157,17 @@ impl ExtMetadataBlockInfo for ExtMetadataBlockLevel8 {
 
     fn bytes_size(&self) -> u64 {
         self.length
+    }
+
+    fn write_bytes_size(&self) -> u32 {
+         match self.length {
+            25 => 29,
+            19 => 23,
+            13 => 17,
+            12 => 15,
+            10 => 13,
+            _ => unreachable!(),
+        }
     }
 
     fn required_bits(&self) -> u64 {

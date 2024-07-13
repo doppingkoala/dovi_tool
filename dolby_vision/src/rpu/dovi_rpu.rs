@@ -231,61 +231,29 @@ impl DoviRpu {
 
     #[inline(always)]
     fn write_rpu_data(&self) -> Result<Vec<u8>> {
-        // Capacity is in bits
-        let mut writer = BitstreamIoWriter::with_capacity(self.original_payload_size * 8);
+        let mut num_bytes: usize = 72;
+        let header = &self.header;
 
+        if header.rpu_type == 2 {
+            if header.vdr_dm_metadata_present_flag {
+                if let Some(vdr_dm_data) = &self.vdr_dm_data {
+                    num_bytes = num_bytes + vdr_dm_data.ext_block_write_length() as usize;
+                }
+            }
+        }
+        // Capacity is in bits
+        let mut writer = BitstreamIoWriter::with_capacity(num_bytes * 8);
+        
         self.validate()?;
 
         // RPU prefix
-        writer.write_n(&0x19, 8)?;
-
-        let header = &self.header;
-        header.write_header(&mut writer)?;
+        writer.write_n(&0xFF, 8)?; // 0xFF just picked to be different from 0x19, ... Used in other code to check if the format of the data has been changed.
 
         if header.rpu_type == 2 {
-            if !header.use_prev_vdr_rpu_flag {
-                if let Some(mapping) = &self.rpu_data_mapping {
-                    mapping.write(&mut writer, &self.header)?;
-                }
-            }
-
             if header.vdr_dm_metadata_present_flag {
                 if let Some(vdr_dm_data) = &self.vdr_dm_data {
                     vdr_dm_data.write(&mut writer)?;
                 }
-            }
-        }
-
-        if let Some(remaining) = &self.remaining {
-            for b in remaining {
-                writer.write(*b)?;
-            }
-        }
-
-        writer.byte_align()?;
-
-        let computed_crc32 = compute_crc32(
-            &writer
-                .as_slice()
-                .ok_or_else(|| anyhow!("Unaligned bytes"))?[1..],
-        );
-
-        if !self.modified {
-            // Validate the parsed crc32 is the same
-            ensure!(
-                self.rpu_data_crc32 == computed_crc32,
-                "RPU CRC32 does not match computed value"
-            );
-        }
-
-        // Write crc32
-        writer.write_n(&computed_crc32, 32)?;
-        writer.write_n(&0x80_u8, 8)?;
-
-        // Trailing bytes
-        if self.trailing_zeroes > 0 {
-            for _ in 0..self.trailing_zeroes {
-                writer.write_n(&0_u8, 8)?;
             }
         }
 
@@ -322,8 +290,9 @@ impl DoviRpu {
     ///     - 2: Converts the RPU to be profile 8.1 compatible.
     ///          Both luma and chroma mapping curves are set to no-op.
     ///          This mode handles source profiles 5, 7 and 8.
-    ///     - 3: Converts to static profile 8.4
-    ///     - 4: Converts to profile 8.1 preserving luma and chroma mapping.
+    ///     - 3: Converts profile 5 to 8.1.
+    ///     - 4: Converts to static profile 8.4
+    ///     - 5: Converts to profile 8.1 preserving luma and chroma mapping.
     ///          Old mode 2 behaviour.
     ///
     /// noop when profile 8 and mode 2 is used
@@ -337,12 +306,8 @@ impl DoviRpu {
         let valid_conversion = match mode {
             ConversionMode::Lossless => true,
             ConversionMode::ToMel => {
-                if matches!(self.dovi_profile, 7 | 8) {
-                    self.convert_to_mel()?;
-                    true
-                } else {
-                    false
-                }
+                self.convert_to_mel()?;
+                true
             }
             ConversionMode::To81 => match self.dovi_profile {
                 7 | 8 => {
@@ -356,7 +321,7 @@ impl DoviRpu {
                 _ => false,
             },
             ConversionMode::To84 => {
-                self.convert_to_p84();
+                self.remove_ext_blocks_for_hdmi_keep_L5();
                 true
             }
             ConversionMode::To81MappingPreserved => {
@@ -378,6 +343,17 @@ impl DoviRpu {
         self.el_type = self.get_enhancement_layer_type();
 
         Ok(())
+    }
+
+    fn remove_ext_blocks_for_hdmi_keep_L5(&mut self) {
+        self.modified = true;
+
+        if let Some(vdr_dm_data) = self.vdr_dm_data.as_mut() {
+            self.modified = true;
+            vdr_dm_data.signal_bit_depth = 12;
+            vdr_dm_data.signal_chroma_format = 1;
+            vdr_dm_data.remove_metadata_level(6);
+        }
     }
 
     fn convert_to_mel(&mut self) -> Result<()> {

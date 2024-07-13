@@ -29,6 +29,8 @@ pub enum DmData {
 pub trait ExtMetadata {
     fn parse(&mut self, reader: &mut BsIoSliceReader) -> Result<()>;
     fn write(&self, writer: &mut BitstreamIoWriter);
+    fn ext_block_write_length(&self) -> Result<u16>;
+    fn num_ext_blocks(&self) -> u64;
 }
 
 pub trait WithExtMetadataBlocks {
@@ -80,32 +82,33 @@ pub trait WithExtMetadataBlocks {
     }
 
     fn write(&self, writer: &mut BitstreamIoWriter) -> Result<()> {
-        let num_ext_blocks = self.num_ext_blocks();
-
-        writer.write_ue(&num_ext_blocks)?;
-
-        // dm_alignment_zero_bit
-        writer.byte_align()?;
-
         let ext_metadata_blocks = self.blocks_ref();
 
         for ext_metadata_block in ext_metadata_blocks {
-            let remaining_bits =
-                ext_metadata_block.length_bits() - ext_metadata_block.required_bits();
 
-            writer.write_ue(&ext_metadata_block.length_bytes())?;
+            writer.write_n(&ext_metadata_block.length_write_bytes(), 32)?;
             writer.write_n(&ext_metadata_block.level(), 8)?;
 
             ext_metadata_block.write(writer)?;
 
-            // ext_dm_alignment_zero_bit
-            for _ in 0..remaining_bits {
-                writer.write(false)?;
-            }
         }
 
         Ok(())
     }
+
+    fn ext_block_write_length(&self) -> u32 {
+        let mut ext_block_write_length: u32 = 0;
+
+        let ext_metadata_blocks = self.blocks_ref();
+
+        for ext_metadata_block in ext_metadata_blocks {
+            ext_block_write_length = ext_block_write_length + 5 + &ext_metadata_block.length_write_bytes();
+        }
+
+        ext_block_write_length
+    }
+
+
 }
 
 impl DmData {
@@ -135,6 +138,20 @@ impl DmData {
         match self {
             DmData::V29(m) => m.write(writer),
             DmData::V40(m) => m.write(writer),
+        }
+    }
+
+    pub fn ext_block_write_length(&self) -> u32 {
+        match self {
+            DmData::V29(m) => m.ext_block_write_length(),
+            DmData::V40(m) => m.ext_block_write_length(),
+        }
+    }
+
+    pub fn num_ext_blocks(&self) -> u64 {
+        match self {
+            DmData::V29(m) => m.num_ext_blocks(),
+            DmData::V40(m) => m.num_ext_blocks(),
         }
     }
 

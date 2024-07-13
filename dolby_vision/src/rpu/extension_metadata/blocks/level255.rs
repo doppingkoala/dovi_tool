@@ -56,6 +56,10 @@ impl ExtMetadataBlockInfo for ExtMetadataBlockLevel255 {
         6
     }
 
+    fn write_bytes_size(&self) -> u32 {
+        6
+    }
+
     fn required_bits(&self) -> u64 {
         48
     }

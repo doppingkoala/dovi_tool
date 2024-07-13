@@ -147,6 +147,14 @@ impl ExtMetadataBlockInfo for ExtMetadataBlockLevel9 {
         self.length
     }
 
+    fn write_bytes_size(&self) -> u32 {
+        match self.length {
+            1 => 1,
+            17 => 18,
+            _ => unreachable!(),
+        }
+    }
+
     fn required_bits(&self) -> u64 {
         match self.length {
             1 => 8,

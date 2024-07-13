@@ -28,8 +28,8 @@ impl ExtMetadataBlockLevel4 {
     pub fn write(&self, writer: &mut BitstreamIoWriter) -> Result<()> {
         self.validate()?;
 
-        writer.write_n(&self.anchor_pq, 12)?;
-        writer.write_n(&self.anchor_power, 12)?;
+        writer.write_n(&self.anchor_pq, 16)?;
+        writer.write_n(&self.anchor_power, 16)?;
 
         Ok(())
     }
@@ -49,6 +49,10 @@ impl ExtMetadataBlockInfo for ExtMetadataBlockLevel4 {
 
     fn bytes_size(&self) -> u64 {
         3
+    }
+
+    fn write_bytes_size(&self) -> u32 {
+        4
     }
 
     fn required_bits(&self) -> u64 {
