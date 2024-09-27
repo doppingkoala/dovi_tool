@@ -208,12 +208,35 @@ fn parse_hdr10plus_for_l1<P: AsRef<Path>>(
         .filter(|(frame_no, _)| scene_first_frames.contains(frame_no));
 
     for (current_shot_id, (frame_no, frame_meta)) in first_frames.enumerate() {
-        let avg_nits = frame_meta.luminance_parameters.average_rgb as f64 / 10.0;
-        let max_nits = frame_meta.peak_brightness_nits(peak_source).unwrap();
+        let max_nits = frame_meta.peak_brightness_nits(PeakBrightnessSource::Histogram).unwrap();
 
         let min_pq = 0;
         let max_pq = (nits_to_pq(max_nits.round()) * 4095.0).round() as u16;
-        let avg_pq = (nits_to_pq(avg_nits.round()) * 4095.0).round() as u16;
+        let avg_pq;
+        if frame_meta.luminance_parameters.luminance_distributions.distribution_index.len() == 9 {
+            if frame_meta.luminance_parameters.luminance_distributions.distribution_index[1] == 5 && frame_meta.luminance_parameters.luminance_distributions.distribution_index[2] == 10{
+                let pq1 = nits_to_pq(frame_meta.luminance_parameters.luminance_distributions.distribution_values[0] as f64 / 10.0);
+                let pq2 = nits_to_pq(frame_meta.luminance_parameters.luminance_distributions.distribution_values[3] as f64 / 10.0);
+                let pq3 = nits_to_pq(frame_meta.luminance_parameters.luminance_distributions.distribution_values[4] as f64 / 10.0);
+                let pq4 = nits_to_pq(frame_meta.luminance_parameters.luminance_distributions.distribution_values[5] as f64 / 10.0);
+                let pq5 = nits_to_pq(frame_meta.luminance_parameters.luminance_distributions.distribution_values[6] as f64 / 10.0);
+                let pq6 = nits_to_pq(frame_meta.luminance_parameters.luminance_distributions.distribution_values[7] as f64 / 10.0);
+                let pq7 = nits_to_pq(frame_meta.luminance_parameters.luminance_distributions.distribution_values[8] as f64 / 10.0);
+                let mean_pq =  (pq1 + pq2) / 2.0 * 0.2400 +
+                                (pq2 + pq3) / 2.0 * 0.2500 +
+                                (pq3 + pq4) / 2.0 * 0.2500 +
+                                (pq4 + pq5) / 2.0 * 0.1500 +
+                                (pq5 + pq6) / 2.0 * 0.0500 +
+                                (pq6 + pq7) / 2.0 * 0.0498;
+                avg_pq = (mean_pq * 4095.0).round() as u16;
+            } else {
+                let avg_nits = frame_meta.luminance_parameters.average_rgb as f64 / 10.0;
+                avg_pq = (nits_to_pq(avg_nits.round()) * 4095.0).round() as u16;
+            }
+        } else {
+            let avg_nits = frame_meta.luminance_parameters.average_rgb as f64 / 10.0;
+            avg_pq = (nits_to_pq(avg_nits.round()) * 4095.0).round() as u16;
+        }
 
         let mut shot = VideoShot {
             start: frame_no,
